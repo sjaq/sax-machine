@@ -3,7 +3,7 @@ require "time"
 
 module SAXMachine
   class SAXHandler < Nokogiri::XML::SAX::Document
-    NO_BUFFER = :no_buffer
+    NO_BUFFER = ''
 
     class StackNode < Struct.new(:object, :config, :buffer)
       def initialize(object, config = nil, buffer = NO_BUFFER)
@@ -117,7 +117,7 @@ module SAXMachine
               element
             end
 
-          object.send(config.setter, value) unless value == NO_BUFFER
+          object.send(config.setter, value)
 
           mark_as_parsed(object, config)
         end
