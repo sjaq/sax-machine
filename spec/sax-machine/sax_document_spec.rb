@@ -10,6 +10,11 @@ describe "SAXMachine" do
         end
       end
 
+      it "should provide mass assignment through initialize method" do
+        document = @klass.new(title: 'Title')
+        document.title.should == 'Title'
+      end
+
       it "should provide an accessor" do
         document = @klass.new
         document.title = "Title"
@@ -54,7 +59,7 @@ describe "SAXMachine" do
             element :date, :class => DateTime
           end
           @document = @klass.new
-          @document.date = DateTime.now.to_s
+          @document.date = Time.now.iso8601
         end
         it "should be available" do
           @klass.data_class(:date).should == DateTime
@@ -306,6 +311,35 @@ describe "SAXMachine" do
             document.second.should == "second match"
           end
         end
+
+        describe "with only one element as a regular expression" do
+          before :each do
+            @klass = Class.new do
+              include SAXMachine
+              element :link, :with => {:foo => /ar$/}
+            end
+          end
+
+          it "should save the text of an element that has matching attributes" do
+            document = @klass.parse("<link foo=\"bar\">match</link>")
+            document.link.should == "match"
+          end
+
+          it "should not save the text of an element that doesn't have matching attributes" do
+            document = @klass.parse("<link>no match</link>")
+            document.link.should be_nil
+          end
+
+          it "should save the text of an element that has matching attributes when it is the second of that type" do
+            document = @klass.parse("<xml><link>no match</link><link foo=\"bar\">match</link></xml>")
+            document.link.should == "match"
+          end
+
+          it "should save the text of an element that has matching attributes plus a few more" do
+            document = @klass.parse("<xml><link>no match</link><link asdf='jkl' foo='bar'>match</link>")
+            document.link.should == "match"
+          end
+        end
       end # using the 'with' option
 
       describe "using the 'value' option" do
@@ -429,7 +463,7 @@ describe "SAXMachine" do
         @klass = Class.new do
           include SAXMachine
           elements :item, :as => :items, :with => {:type => 'Bar'}, :class => Bar
-          elements :item, :as => :items, :with => {:type => 'Foo'}, :class => Foo
+          elements :item, :as => :items, :with => {:type => /Foo/}, :class => Foo
         end
       end
       
@@ -523,6 +557,7 @@ describe "SAXMachine" do
         element :title
         element :name, :as => :author
         element "feedburner:origLink", :as => :url
+        element :link, :as => :alternate, :value => :href, :with => {:type => "text/html", :rel => "alternate"}
         element :summary
         element :content
         element :published
@@ -540,6 +575,12 @@ describe "SAXMachine" do
     it "should parse the url" do
       f = Atom.parse(@xml)
       f.url.should == "http://www.pauldix.net/"
+    end
+
+    it "should parse entry url" do
+      f = Atom.parse(@xml)
+      f.entries.first.url.should == "http://www.pauldix.net/2008/09/marshal-data-to.html?param1=1&param2=2"
+      f.entries.first.alternate.should == "http://feeds.feedburner.com/~r/PaulDixExplainsNothing/~3/383536354/marshal-data-to.html?param1=1&param2=2"
     end
   end
 
